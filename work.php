@@ -1,0 +1,128 @@
+<?php
+require_once 'db_connect.php';
+
+if (!isset($_GET['id'])) {
+    die("Portfolio ID not specified.");
+}
+
+$portfolio_id = (int)$_GET['id'];
+
+// Fetch portfolio data from portfolios table
+$stmt = $pdo->prepare("SELECT * FROM portfolios WHERE id = ?");
+$stmt->execute([$portfolio_id]);
+$user = $stmt->fetch(); // Keep variable name $user for template compatibility
+
+if (!$user) {
+    die("Portfolio not found.");
+}
+
+// Fetch projects linked to this portfolio
+$stmt = $pdo->prepare("SELECT * FROM projects WHERE portfolio_id = ?");
+$stmt->execute([$portfolio_id]);
+$projects = $stmt->fetchAll();
+
+// Skills processing
+$skills = !empty($user['skills']) ? explode(',', $user['skills']) : [];
+
+$theme_class = 'theme-' . strtolower(str_replace(' ', '-', $user['theme_choice'] ?: 'Minimalist Light'));
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($user['name']); ?> | Work & Skills</title>
+    <link rel="stylesheet" href="css/themes.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        .active { color: #000 !important; border-bottom: 2px solid #000; padding-bottom: 2px; }
+    </style>
+</head>
+<body class="<?php echo $theme_class; ?>">
+
+    <!-- Navigation -->
+    <nav class="portfolio-nav">
+        <div class="nav-brand"><?php echo htmlspecialchars($user['name']); ?></div>
+        <div class="nav-links">
+            <a href="view.php?id=<?php echo $portfolio_id; ?>">HOME</a>
+            <a href="work.php?id=<?php echo $portfolio_id; ?>" class="active">WORK & SKILLS</a>
+        </div>
+    </nav>
+
+    <main class="story-container" style="margin-top: 100px;">
+        <!-- Core Values / Skills -->
+        <section id="about" class="story-section animate-up visible">
+            <h2 class="section-heading">Journey & Socials</h2>
+            <div class="contact-grid">
+                <?php if ($user['linkedin_url']): ?>
+                    <div class="contact-card">
+                        <span class="contact-label">LINKEDIN</span>
+                        <a href="<?php echo htmlspecialchars($user['linkedin_url']); ?>" target="_blank" class="contact-value">View Profile</a>
+                    </div>
+                <?php endif; ?>
+                <?php if ($user['github_url']): ?>
+                    <div class="contact-card">
+                        <span class="contact-label">GITHUB</span>
+                        <a href="<?php echo htmlspecialchars($user['github_url']); ?>" target="_blank" class="contact-value">View Repositories</a>
+                    </div>
+                <?php endif; ?>
+                <?php if ($user['twitter_url']): ?>
+                    <div class="contact-card">
+                        <span class="contact-label">TWITTER / X</span>
+                        <a href="<?php echo htmlspecialchars($user['twitter_url']); ?>" target="_blank" class="contact-value">Connect</a>
+                    </div>
+                <?php endif; ?>
+                <div class="contact-card">
+                    <span class="contact-label">EMAIL</span>
+                    <a href="mailto:<?php echo htmlspecialchars($user['email']); ?>" class="contact-value">Send Message</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Skills -->
+        <section id="skills" class="story-section animate-up">
+            <h2 class="section-heading">Core Values & Expertise</h2>
+            <div class="skills-grid">
+                <?php foreach ($skills as $skill): ?>
+                    <div class="skill-pill"><?php echo htmlspecialchars(trim($skill)); ?></div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+
+        <!-- Projects / My Story -->
+        <section id="projects" class="story-section animate-up visible">
+            <h2 class="section-heading">Innovation & Impact</h2>
+            <p class="section-intro">A collection of projects and initiatives that define my professional journey.</p>
+            <div class="story-projects-grid">
+                <?php foreach ($projects as $project): ?>
+                    <div class="story-card">
+                        <div class="card-meta">PROJECT</div>
+                        <h3><?php echo htmlspecialchars($project['title']); ?></h3>
+                        <p><?php echo nl2br(htmlspecialchars($project['description'])); ?></p>
+                        <a href="<?php echo htmlspecialchars($project['link']); ?>" target="_blank" class="accent-link">LEARN MORE →</a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    </main>
+
+    <footer class="portfolio-final-footer">
+        <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($user['name']); ?>. Generated by Dynamic Portfolio Builder.</p>
+        <p><a href="dashboard.php" style="color: inherit; text-decoration: none; opacity: 0.5;">Manage Profile</a></p>
+    </footer>
+
+    <script>
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.animate-up').forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>
